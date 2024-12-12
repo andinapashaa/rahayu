@@ -1,0 +1,95 @@
+<ScrollView
+    android:id="@+id/textViewResults"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingHorizontal="16dp"
+    android:fillViewport="true"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF">
+
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="Face Scan Results"
+            android:textColor="#A97080"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <!-- Fragment Section (Vertical Images) -->
+        <ImageView
+            android:id="@+id/fragment1"
+            android:layout_width="223dp"
+            android:layout_height="288dp"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:id="@+id/faceAnalystTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Face Problem"
+            android:textColor="#A97080"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/faceAnalystDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Problem 1: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+            android:textColor="#555555"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Problem Section -->
+        <TextView
+            android:id="@+id/faceProblemTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Skincare Ingredients"
+            android:textColor="#A97080"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:id="@+id/faceProblemDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+            android:textColor="#555555"
+            android:textSize="14sp"
+            android:layout_marginBottom="16dp" />
+
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center">
+            <ImageView
+                android:id="@+id/captureButtonLeft"
+                android:layout_width="120dp"
+                android:layout_height="80dp"
+                android:src="@drawable/ic_button2"/>
+
+            <TextView
+                android:id="@+id/done"
+                android:layout_width="120dp"
+                android:layout_height="80dp"
+                android:gravity="center"
+                android:text="Done"
+                android:textColor="@color/black"
+                android:textSize="16sp" />
+        </RelativeLayout>
+
+    </LinearLayout>
+</ScrollView>
