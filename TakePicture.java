@@ -23,22 +23,37 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
+import com.google.android.material.snackbar.Snackbar;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 public class TakePicture extends AppCompatActivity {
     ImageView logoImage;
     private static final int KODE_KAMERA = 222;
     private static final int PERMISSION_REQUEST = 223;
     String filePath;
+    String classValue;
+
+    private static final String API_KEY = "I1zjcfo8SezNL5iY53Ak";
+    private static final String MODEL_ENDPOINT = "final-project-mobile-programming/2";
+    private static final String UPLOAD_URL = "https://detect.roboflow.com/" + MODEL_ENDPOINT + "?api_key=" + API_KEY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,13 +65,10 @@ public class TakePicture extends AppCompatActivity {
 
         logoImage = findViewById(R.id.resultPicture);
 
-        requestPermissions();
-
         View.OnClickListener buttonClickListener = view -> {
             if (view.getId() == R.id.takePicture) {
                 Intent it = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-                // Menyimpan gambar di folder hasil foto di external storage
                 File imagesFolder = new File(getExternalFilesDir(null), "HasilFoto");
                 if (!imagesFolder.exists()) {
                     imagesFolder.mkdirs();
@@ -67,14 +79,13 @@ public class TakePicture extends AppCompatActivity {
                 filePath = imagesFolder + File.separator + s.toString() + ".jpg";
                 File image = new File(filePath);
 
-                Uri uriSavedImage = FileProvider.getUriForFile(TakePicture.this, getApplicationContext().getPackageName() + ".provider", image);
+                Uri uriSavedImage = FileProvider.getUriForFile(this, getApplicationContext().getPackageName() + ".provider", image);
                 it.putExtra(MediaStore.EXTRA_OUTPUT, uriSavedImage);
 
                 startActivityForResult(it, KODE_KAMERA);
             } else if (view.getId() == R.id.confirmPhoto) {
-                // Konfirmasi foto dan kirim ke API
-                processImage();
                 Intent intent = new Intent(TakePicture.this, LastResultActivity.class);
+                intent.putExtra("result", classValue);
                 intent.putExtra("filePath", filePath);
                 startActivity(intent);
             }
@@ -95,65 +106,89 @@ public class TakePicture extends AppCompatActivity {
     private void loadCapturedPhoto() {
         BitmapFactory.Options options = new BitmapFactory.Options();
         Bitmap bitmap = BitmapFactory.decodeFile(filePath, options);
-
-        // Menampilkan gambar di ImageView
         logoImage.setImageBitmap(bitmap);
-    }
 
-    private void processImage() {
-        // Mengonversi gambar ke Base64 dan mengirimkannya ke API
+        Snackbar.make(findViewById(android.R.id.content), "Tunggu Sebentar....", Snackbar.LENGTH_LONG).show();
+
         new Thread(() -> {
             try {
-                File file = new File(filePath);
-                FileInputStream fileInputStreamReader = new FileInputStream(file);
-                byte[] bytes = new byte[(int) file.length()];
-                fileInputStreamReader.read(bytes);
-                fileInputStreamReader.close();
-                String encodedFile = Base64.encodeToString(bytes, Base64.NO_WRAP);
-
-                String API_KEY = "I1zjcfo8SezNL5iY53Ak"; // Ganti dengan API key Anda
-                String MODEL_ENDPOINT = "final-project-mobile-programming/2"; // Endpoint model
-
-                // URL untuk request API
-                String uploadURL = "https://detect.roboflow.com/" + MODEL_ENDPOINT + "?api_key=" + API_KEY + "&name=YOUR_IMAGE.jpg";
-
-                // HttpURLConnection untuk mengirimkan gambar
-                URL url = new URL(uploadURL);
-                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                connection.setRequestMethod("POST");
-                connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                connection.setRequestProperty("Content-Length", String.valueOf(encodedFile.getBytes().length));
-                connection.setUseCaches(false);
-                connection.setDoOutput(true);
-
-                // Mengirim data
-                DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
-                wr.writeBytes(encodedFile);
-                wr.close();
-
-                // Membaca respons
-                InputStream stream = connection.getInputStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-                StringBuilder response = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    response.append(line);
-                }
-                reader.close();
-                connection.disconnect();
-
-                Log.d("TakePicture", "Response: " + response.toString());
-
-                // Mengirim respons API ke LastResultActivity
-                Intent intent = new Intent(TakePicture.this, LastResultActivity.class);
-                intent.putExtra("filePath", filePath); // Kirim path gambar
-                intent.putExtra("apiResponse", response.toString()); // Kirim respons API
-                startActivity(intent);
-
-            } catch (Exception e) {
-                Log.e("TakePicture", "Error: " + e.getMessage(), e);
+                String result = processImage(UPLOAD_URL, new File(filePath));
+                classValue = result;
+                runOnUiThread(() -> {
+                    Log.d("Hasil", "Hasil Prediksi: " + result);
+                    Snackbar.make(findViewById(android.R.id.content), "Deteksi Berhasil", Snackbar.LENGTH_LONG).show();
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }).start();
+    }
+
+    private String processImage(String requestURL, File file) throws IOException {
+        String boundary = UUID.randomUUID().toString();
+        String LINE_FEED = "\r\n";
+        HttpURLConnection connection = null;
+        StringBuilder filteredResult = new StringBuilder();
+
+        try {
+            URL url = new URL(requestURL);
+            connection = (HttpURLConnection) url.openConnection();
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setRequestMethod("POST");
+            connection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+
+            OutputStream outputStream = connection.getOutputStream();
+            PrintWriter writer = new PrintWriter(new OutputStreamWriter(outputStream, "UTF-8"), true);
+
+            writer.append("--").append(boundary).append(LINE_FEED);
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"")
+                    .append(file.getName()).append("\"").append(LINE_FEED);
+            writer.append("Content-Type: ").append("image/jpg").append(LINE_FEED).append(LINE_FEED).flush();
+
+            FileInputStream inputStream = new FileInputStream(file);
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+            inputStream.close();
+
+            writer.append(LINE_FEED).flush();
+            writer.append("--").append(boundary).append("--").append(LINE_FEED);
+            writer.close();
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+                StringBuilder result = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    result.append(line);
+                }
+                reader.close();
+
+                JSONObject jsonResponse = new JSONObject(result.toString());
+                JSONArray predictions = jsonResponse.getJSONArray("predictions");
+
+                for (int i = 0; i < predictions.length(); i++) {
+                    JSONObject prediction = predictions.getJSONObject(i);
+                    String detectedClass = prediction.getString("class");
+                    filteredResult.append("Class: ").append(detectedClass)
+                            .append("\n");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+
+        return filteredResult.toString();
     }
 
     private void requestPermissions() {
