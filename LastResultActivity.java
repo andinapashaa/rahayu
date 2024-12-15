@@ -24,16 +24,16 @@ public class LastResultActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.lastresult);
 
+        String result = getIntent().getStringExtra("result");
+        String filePath = getIntent().getStringExtra("filePath");
         pictureResult = findViewById(R.id.fragment1);
         apiResponseText = findViewById(R.id.faceAnalystDescription);
         faceProblemDescription = findViewById(R.id.faceProblemDescription);
         TextView doneButton = findViewById(R.id.done);
 
-        // Mendapatkan filePath dan apiResponse dari Intent
-        String filePath = getIntent().getStringExtra("filePath");
-        String apiResponse = getIntent().getStringExtra("apiResponse");
+        String[] resultPart = result.split(",");
+        String detectResult = resultPart[0].split(":")[1].trim();
 
-        // Tombol selesai untuk kembali ke MainActivity
         doneButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -42,46 +42,21 @@ public class LastResultActivity extends AppCompatActivity {
             }
         });
 
-        // Tampilkan gambar dari filePath
         if (filePath != null) {
             pictureResult.setImageBitmap(BitmapFactory.decodeFile(filePath));
         } else {
-            pictureResult.setImageResource(R.mipmap.ic_launcher); // Gambar default jika filePath kosong
+            pictureResult.setImageResource(R.mipmap.ic_launcher);
         }
 
-        // Parsing dan menampilkan respons API
-        if (apiResponse != null) {
-            try {
-                JSONObject jsonObject = new JSONObject(apiResponse);
-                JSONArray predictionsArray = jsonObject.getJSONArray("predictions");
-
-                if (predictionsArray.length() > 0) {
-                    JSONObject firstPrediction = predictionsArray.getJSONObject(0);
-
-                    String className = firstPrediction.optString("class", "Unknown");
-                    double confidence = firstPrediction.optDouble("confidence", 0.0);
-
-                    // Menampilkan hasil di TextView
-                    String resultText = className;
-                    apiResponseText.setText(resultText);
-
-                    // Menampilkan deskripsi berdasarkan kelas
-                    String description = getDescriptionForClass(className);
-                    faceProblemDescription.setText(description);
-                } else {
-                    apiResponseText.setText("No predictions found in the API response.");
-                }
-            } catch (JSONException e) {
-                // Tampilkan kesalahan parsing JSON
-                apiResponseText.setText("Error parsing API response.");
-                Toast.makeText(LastResultActivity.this, "JSON Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
+        if (detectResult != null) {
+            apiResponseText.setText(detectResult);
+            String description = getDescriptionForClass(detectResult);
+            faceProblemDescription.setText(description);
         } else {
             apiResponseText.setText("No API response received.");
         }
     }
 
-    // Fungsi untuk mendapatkan deskripsi berdasarkan kelas
     private String getDescriptionForClass(String className) {
         switch (className) {
             case "acne":
